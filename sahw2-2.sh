@@ -1,40 +1,58 @@
 #!/bin/sh
 
 ch_class_totable() {
+	local len=15
 	local sp
 	local str=""
-	printf "x .%-20s .%-20s .%-20s .%-20s .%-20s \n" Mon Tue Wed Thu Fri > test
-	for hour in A B C D E F G H I J K;do
-		printf "%s" "$hour " >> test
-		for day in 1 2 3 4 5;do
-			str="`awk "/${day}[A-K]*${hour}/ "'{ gsub(/[1-5][A-K]+[1-5]?[A-K]* /,"",$0); gsub(/[A-Z]+[0-9]+ /,"",$0); printf("%s.",$0); }' yourclass`"
+	local H="A B C D X E F G H I J K"
+	local D="1 2 3 4 5 6 7"
+	local D_len=7
+	#printf "x .%-${len}s.%-${len}s.%-${len}s.%-${len}s.%-${len}s \n" Mon Tue Wed Thu Fri > test
+	printf "x .%-${len}s.%-${len}s.%-${len}s.%-${len}s.%-${len}s.%-${len}s.%-${len}s  \n" Mon Tue Wed Thu Fri Sat Sun> test
+	for hour in $H;do
+
+		printf "%s" "--" >> test
+		for i in $D;do
+			local j=1
+			while [ $j -lt $((len+1)) ];do
+				printf "%s" "-" >> test
+				j=$((j+1))
+			done
+		done
+
+		printf "\n%s" "$hour " >> test
+		for day in $D;do
+			str="`awk "/${day}[A-K]*${hour}/ "'{ gsub(/[1-5][A-KX]+[1-5]?[A-KX]* /,"",$0); gsub(/[A-Z]+[0-9]+ /,"",$0); printf("%s.",$0); }' yourclass`"
 			if [ $day -eq 1 ];then str1=$str
 			elif [ $day -eq 2 ];then str2=$str
 			elif [ $day -eq 3 ];then str3=$str
 			elif [ $day -eq 4 ];then str4=$str
-			else  str5=$str
+			elif [ $day -eq 5 ];then str5=$str
+			elif [ $day -eq 6 ];then str6=$str
+			else  str7=$str
 			fi
 		done
 		
 		sp=0
-		while ! [ ${sp} -eq 5 ];do
+		while ! [ ${sp} -eq ${D_len} ];do
 			sp=0
-			for i in 1 2 3 4 5;do
+			for i in $D;do
 				str=`eval echo '$'str$i`
-				printf "|%-20s" "`echo $str | cut -c1-20`" >> test
-				str="`echo $str | cut -c21-`"
+				printf "|%-${len}s" "`echo $str | cut -c1-${len}`" >> test
+				str="`echo $str | cut -c$((len+1))-`"
 				if [ ${#str} -eq 0 ];then sp=$((sp+1));fi
 
 				if [ $i -eq 1 ];then str1=$str
 				elif [ $i -eq 2 ];then str2=$str
 				elif [ $i -eq 3 ];then str3=$str
 				elif [ $i -eq 4 ];then str4=$str
-				else  str5=$str
+				elif [ $i -eq 5 ];then str5=$str
+				elif [ $i -eq 6 ];then str6=$str
+				else  str7=$str
 				fi
 			done
 			printf "\n  " >> test
 		done
-		printf "\n" >> test
 	done 
 	
 }
