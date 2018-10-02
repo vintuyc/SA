@@ -1,6 +1,7 @@
 #!/bin/sh
 
 ch_class_totable() {
+	if ! [ -e yourclass_table ];then touch yourclass_table;fi
 	local OP=`cat op`
 	local len=15
 
@@ -94,54 +95,70 @@ display_widget1() {
 }
 
 display_widget2() {
-	#local str=`cat $TEMPSEARCH`
-	#local is_NULL=1
-	#if [ $search_type -eq 1 ] || [ $search_type -eq 255 ] || [ ${#str} -eq 0 ];then
-		dialog --clear --extra-button --extra-label "show yourclass" \
+	local str=`cat $TEMPSEARCH`
+	local is_NULL=1
+	if [ $search_type -eq 1 ] || [ $search_type -eq 255 ] || [ ${#str} -eq 0 ];then
+		dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
 			--cancel-label "Exit" --ok-label "Select" \
 			--menu "Select courses" 50 80 50 \
 	       		--file ${TEMPTABLE_SPLIT} 2>${TEMPOP}
-
-	#elif [ $search_type -eq 0 ];then 
+	elif [ $search_type -eq 0 ];then 
 		#search by time
-	#	local T="`awk "/^[1-7]/ "'{
-	#		for(i=1;i<=length($0);i++){
-	#			c=substr($0,i,1);
-	#			if(c~/[1-7]/){ num=c; }
-	#			if(c~/[A-KXNM]/){ printf("%c%c ",num,c);}
-	#		}
-	#	}' $TEMPSEARCH`"
+		local T="`awk "/^[1-7]/ "'{
+			for(i=1;i<=length($0);i++){
+				c=substr($0,i,1);
+				if(c~/[1-7]/){ num=c; }
+				if(c~/[A-KXNM]/){ printf("%c%c ",num,c);}
+			}
+		}' $TEMPSEARCH`"
 
-	#	echo "" > $TEMPSEARCH
-	#	for t in $T;do
-	#		local d=`echo $t | cut -c1`
-	#		local h=`echo $t | cut -c2`
-	#		awk "/$d[A-KNMX]*$h/ "'{printf("%s\n",$0);} ' ${TEMPTABLE_SPLIT} >> $TEMPSEARCH
-	#	done
-	#	str=`cat $TEMPSEARCH`
-	#	if [ ${#str} -ne 0 ];then
-	#		dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
-	#		--cancel-label "Exit" --ok-label "Select" \
-	#		--menu "Select courses" 50 80 50 --file ${TEMPSEARCH} 2>${TEMPOP}
-	#	else
-	#		is_NULL=0
-	#		dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
-	#		--cancel-label "Exit" --ok-label "Return to timetable" \
-	#		--yesno "NULL" 50 80
-	#	fi			
-	#elif [ $search_type -eq 3 ];then
-	#	#search by course name
-	#	echo "" > $TEMPSEARCH
-	#fi
+		cat $TEMPTABLE_SPLIT  > $TEMPSEARCH
+		TEMPIN=`mktemp /tmp/tmp.XXXXXX`
+		for t in $T;do
+			cat $TEMPSEARCH > $TEMPIN
+			local d=`echo $t | cut -c1`
+			local h=`echo $t | cut -c2`
+			grep -e "$d[A-KNMX]*$h" $TEMPIN > $TEMPSEARCH 
+		done
+		
+		rm $TEMPIN	
+		str=`cat $TEMPSEARCH`
+		if [ ${#str} -ne 0 ];then
+			dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
+			--cancel-label "Exit" --ok-label "Select" \
+			--menu "Select courses" 50 80 50 --file ${TEMPSEARCH} 2>${TEMPOP}
+		else
+			is_NULL=0
+			dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
+			--cancel-label "Exit" --ok-label "Return to timetable" \
+			--yesno "NULL" 5 100
+		fi	
+	elif [ $search_type -eq 3 ];then
+		#search by course name
+		grep -e ".*-.*-$str.*" $TEMPTABLE_SPLIT > $TEMPSEARCH
+		str=`cat $TEMPSEARCH`
+		if [ ${#str} -ne 0 ];then
+			dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
+			--cancel-label "Exit" --ok-label "Select" \
+			--menu "Select courses" 50 80 50 --file ${TEMPSEARCH} 2>${TEMPOP}
+		else
+			is_NULL=0
+			dialog --clear --extra-button --extra-label "show yourclass" --help-button --help-label "Search" \
+			--cancel-label "Exit" --ok-label "Return to timetable" \
+			--yesno "NULL" 5 100
+		fi
+
+	fi
  
 	local OP=$?
-	if [ $OP -eq 1 ];then
+	if [ $OP -eq 1 ] || [ $OP -eq 255 ];then
 		echo $CH > ch
 		echo 2 > widget
 		echo "Exit"
-	elif [ $OP -eq 0 ];then
-		#if [ $is_NULL -eq 0 ];then display_widget2;fi
+	elif [ $OP -eq 0 ] && [ $is_NULL -ne 0 ];then
 		display_widget3
+	elif [ $OP -eq 0 ] && [ $is_NULL -eq 0 ];then
+		display_widget2
 	elif [ $OP -eq 3 ];then
 		display_widget0
 	elif [ $OP -eq 2 ];then
@@ -190,7 +207,7 @@ display_widget3() {
 	OP=$?
 	if [ $OP -eq 0 ];then
 		if [ $load3 -eq 0 ];then load3=1;fi
-		#search_type=1
+		search_type=1
 		display_widget2
 	elif [ $OP -eq 1 ];then
 		echo 3 > widget
@@ -199,24 +216,24 @@ display_widget3() {
 	fi
 }
 
-#display_widget4() {
-#
-#	dialog --ok-label "Search by time" --no-label "Exit" --extra-button --extra-label "Search by course name" \
-#		--inputbox "the part of course name or the time you want to serach" 15 45 2>$TEMPSEARCH
-#
-#	search_type=$?
-#	if [ $search_type -eq 1 ] || [ $search_type -eq 255 ];then
-#		echo 4 > widget
-#		echo $CH > ch
-#		echo "Exit"
-#	elif [ $search_type -eq 0 ] || [ $search_type -eq 3 ];then
-#		display_widget2
-#	fi
-#
-#}
+display_widget4() {
+
+	dialog --ok-label "Search by free time" --no-label "Exit" --extra-button --extra-label "Search by course name" \
+		--inputbox "the part of course name or the time you want to serach" 15 45 2>$TEMPSEARCH
+
+	search_type=$?
+	if [ $search_type -eq 1 ] || [ $search_type -eq 255 ];then
+		echo 4 > widget
+		echo $CH > ch
+		echo "Exit"
+	elif [ $search_type -eq 0 ] || [ $search_type -eq 3 ];then
+		display_widget2
+	fi
+
+}
 
 display_widget0() {
-	if  [ ! -e yourclass_table ] || [ $CH -eq 0 ];then ch_class_totable;fi
+	if  [ -e yourclass_table ] || [ $CH -eq 0 ];then ch_class_totable;fi
 
 	#Options:3 Exit:2 Add Class:0
 	dialog --clear --extra-button --extra-label "Options" \
@@ -248,7 +265,7 @@ fi
 #widget - the number in the file widget records what widget you stay in the last time 
 #yourclass - it is your selected class record
 if ! [ -e ch ];then touch ch; echo 0 > ch;fi
-if ! [ -e op ];then touch op; echo 0 > op;fi
+if ! [ -e op ];then touch op; echo 1 > op;fi
 if ! [ -e widget ];then touch widget; echo 0 > widget;fi
 if ! [ -e yourclass ];then touch yourclass;fi
 
@@ -269,6 +286,7 @@ awk 'BEGIN {count = 1}
 #define the variable needed:
 #load3 - whether the exit widget is widget3
 #CH - whether added class or change different way to show
+#search_type - for widget4
 #W - the exit widget
 load3=1
 search_type=1
