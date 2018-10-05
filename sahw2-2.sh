@@ -245,7 +245,7 @@ display_widget0() {
 	if [ $status -eq 3 ];then
 		display_widget1
 	elif [ $status -eq 0 ];then
-		#search_type=1
+		search_type=1
 		display_widget2
 	else
 		echo $CH > ch		
